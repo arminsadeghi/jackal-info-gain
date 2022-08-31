@@ -1,0 +1,35 @@
+<launch>
+
+    <arg name="replanning_time" defualt="0.1"/>
+    <arg name="global_path_topic" defualt="path"/>
+    <arg name="odom_sub_topic" defualt="path"/>
+    <arg name="frenet_paths_pub_topic" defualt="path"/>
+
+    <node pkg="jig" type="jackal_planner_node" output="screen">
+        <param name="max_speed" value="1"/>
+        <param name="max_accel" value=".2"/>
+        <param name="max_curvature" value="1"/>
+        <param name="max_road_width_l" value="1"/>
+        <param name="max_road_width_r" value="1"/>
+        <param name="d_road_width" value=".1"/>
+        <param name="dt" value=".1"/>
+        <param name="max_t" value="5"/>
+        <param name="min_t" value="3"/>
+        <param name="d_t_s" value="0.1"/>
+        <param name="n_s_sample" value="10"/>
+        <param name="obstacle_clearance" value="0"/>
+        <param name="kd" value="1"/>
+        <param name="kv" value="1"/>
+        <param name="ka" value="1"/>
+        <param name="kj" value="1"/>
+        <param name="kt" value="1"/>
+        <param name="ko" value="1"/>
+        <param name="klat" value="1"/>
+        <param name="klon" value="1"/>
+        <param name="num_threads" value="1"/>
+        <param name="global_path_topic" value="$(arg global_path_topic)"/>
+        <param name="odom_sub_topic" value="$(arg odom_sub_topic)"/>
+        <param name="frenet_paths_pub_topic" value="$(arg frenet_paths_pub_topic)"/>
+        <param name="replanning_time" value="$(arg replanning_time)"/>
+    </node>
+</launch>
