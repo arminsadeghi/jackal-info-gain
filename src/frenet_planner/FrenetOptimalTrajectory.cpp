@@ -35,13 +35,14 @@ FrenetOptimalTrajectory::~FrenetOptimalTrajectory() {
  * 
  * @param fot_ic_ the current state of the car
  */
-void FrenetOptimalTrajectory::calcFrenetPaths(FrenetInitialConditions *fot_ic_){
+void FrenetOptimalTrajectory::calcFrenetPaths(FrenetInitialConditions *fot_ic){
     
     auto start = chrono::high_resolution_clock::now();
+    // std::cout<<fot_ic->s0<<std::endl;
     x.assign(fot_ic->wx, fot_ic->wx + fot_ic->nw);
     y.assign(fot_ic->wy, fot_ic->wy + fot_ic->nw);
     
-
+    _fot_ic = fot_ic;
     // make sure best_frenet_path is initialized
     best_frenet_path = nullptr;
 
@@ -49,29 +50,52 @@ void FrenetOptimalTrajectory::calcFrenetPaths(FrenetInitialConditions *fot_ic_){
     if (x.size() < 2) {
         return;
     }
-
-    // construct spline path
-    csp = new CubicSpline2D(x, y);
-
-    // calculate the trajectories
-    if (fot_hp->num_threads == 0) {
-        // calculate how to split computation across threads
-
-        int total_di_iter = static_cast<int>((fot_hp->max_road_width_l +
-                                              fot_hp->max_road_width_r) /
-                                             fot_hp->d_road_w) +
-                            1; // account for the last index
-
-        calc_frenet_paths(0, total_di_iter, false);
-
-    } else { // if threading
-        threaded_calc_all_frenet_paths();
-    }
     auto end = chrono::high_resolution_clock::now();
     double run_time =
         chrono::duration_cast<chrono::nanoseconds>(end - start).count();
     run_time *= 1e-6;
-    // cout << "Planning runtime " << run_time << "\n";
+    cout << "Planning runtime copy" << run_time << "\n";
+
+    start = chrono::high_resolution_clock::now();
+    // construct spline path
+    csp = new CubicSpline2D(x, y);
+    end = chrono::high_resolution_clock::now();
+    run_time =
+        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    run_time *= 1e-6;
+    cout << "Planning runtime SPLINE" << run_time << "\n";
+    // std::cout<<"total_di_iter********,"<<std::endl;
+
+    start = chrono::high_resolution_clock::now();
+    // std::cout<<"00000000000000,"<<std::endl;
+    int total_di_iter = static_cast<int>((fot_hp->max_road_width_l +
+                                            fot_hp->max_road_width_r) /
+                                            fot_hp->d_road_w) +
+                        1; // account for the last index
+
+    // std::cout<<"total_di_iter********,"<<total_di_iter<<std::endl;
+    calc_frenet_paths(0, total_di_iter, false);
+
+    // // calculate the trajectories
+    // if (fot_hp->num_threads == 0) {
+    //     // calculate how to split computation across threads
+    //     std::cout<<"00000000000000,"<<std::endl;
+    //     int total_di_iter = static_cast<int>((fot_hp->max_road_width_l +
+    //                                           fot_hp->max_road_width_r) /
+    //                                          fot_hp->d_road_w) +
+    //                         1; // account for the last index
+
+    //     std::cout<<"total_di_iter********,"<<total_di_iter<<std::endl;
+    //     calc_frenet_paths(0, total_di_iter, false);
+
+    // } else { // if threading
+    //     threaded_calc_all_frenet_paths();
+    // }
+    end = chrono::high_resolution_clock::now();
+    run_time =
+        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    run_time *= 1e-6;
+    cout << "Planning runtime CREATION" << run_time << "\n";
 }
 
 // Return the best path
@@ -132,6 +156,8 @@ void FrenetOptimalTrajectory::threaded_calc_all_frenet_paths() {
 void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                                                 int end_di_index,
                                                 bool multithreaded) {
+
+    // std::cout<<"==============="<<std::endl;
     double t, ti, tv;
     double lateral_deviation, lateral_velocity, lateral_acceleration,
         lateral_jerk;
@@ -157,8 +183,9 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
             lateral_jerk = 0;
 
             fp = new FrenetPath(fot_hp);
+          
             QuinticPolynomial lat_qp = QuinticPolynomial(
-                fot_ic->c_d, fot_ic->c_d_d, fot_ic->c_d_dd, di, 0.0, 0.0, ti);
+                _fot_ic->c_d, _fot_ic->c_d_d, _fot_ic->c_d_dd, di, 0.0, 0.0, ti);
 
             // construct frenet path
             t = 0;
@@ -174,11 +201,10 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 lateral_jerk += abs(lat_qp.calc_third_derivative(t));
                 t += fot_hp->dt;
             }
-
             // velocity keeping
-            tv = fot_ic->target_speed - fot_hp->d_t_s * fot_hp->n_s_sample;
+            tv = _fot_ic->target_speed - fot_hp->d_t_s * fot_hp->n_s_sample;
             while (tv <=
-                   fot_ic->target_speed + fot_hp->d_t_s * fot_hp->n_s_sample) {
+                   _fot_ic->target_speed + fot_hp->d_t_s * fot_hp->n_s_sample) {
                 longitudinal_acceleration = 0;
                 longitudinal_jerk = 0;
 
@@ -190,7 +216,7 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 tfp->d_dd.assign(fp->d_dd.begin(), fp->d_dd.end());
                 tfp->d_ddd.assign(fp->d_ddd.begin(), fp->d_ddd.end());
                 QuarticPolynomial lon_qp = QuarticPolynomial(
-                    fot_ic->s0, fot_ic->c_speed, 0.0, tv, 0.0, ti);
+                    _fot_ic->s0, _fot_ic->c_speed, 0.0, tv, 0.0, ti);
 
                 // longitudinal motion
                 for (double tp : tfp->t) {
@@ -241,7 +267,7 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 tfp->c_longitudinal_acceleration = longitudinal_acceleration;
                 tfp->c_longitudinal_jerk = longitudinal_jerk;
                 tfp->c_end_speed_deviation =
-                    abs(fot_ic->target_speed - tfp->s_d.back());
+                    abs(_fot_ic->target_speed - tfp->s_d.back());
                 tfp->c_time_taken = ti;
                 tfp->c_longitudinal =
                     fot_hp->ka * tfp->c_longitudinal_acceleration +

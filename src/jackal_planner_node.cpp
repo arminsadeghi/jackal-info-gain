@@ -18,8 +18,9 @@ int main(int argc, char** argv){
 
     ros::init(argc, argv, "jackal_planner");
 
-    FrenetHyperparameters fhp;
     ros::NodeHandle nh;
+    
+    JackalPlanner planner(&nh);
 
     ros::spin();
     return 0;

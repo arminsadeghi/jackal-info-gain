@@ -11,12 +11,12 @@
 
 #ifndef JACKAL_INFO_JACKAL_PLANNER
 #define JACKAL_INFO_JACKAL_PLANNER
-
+#include <iostream>
 #include <ros/ros.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <jackal_info_gain/FrenetPaths.h>
-#include <iostream>
 #include "jackal_info_gain/frenet_planner/FrenetOptimalTrajectory.h"
 
 class JackalPlanner {
@@ -28,13 +28,13 @@ class JackalPlanner {
     std::string _global_path_topic;
     std::string _odom_sub_topic;
     std::string _frenet_paths_pub_topic;
-    nav_msgs::Odometry _current_state;
+    geometry_msgs::PoseWithCovarianceStamped _current_state;
     double _replanning_time;
     FrenetOptimalTrajectory* _frenet_planner;
     ros::Time _last_planning_update;
 
-    void _global_path_cb(nav_msgs::PathConstPtr&);
-    void _odom_cb(nav_msgs::OdometryConstPtr&);
+    void _global_path_cb(const nav_msgs::Path::ConstPtr&);
+    void _odom_cb(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &);
     void _getTrajectories();
     void _getPlannerParams(FrenetHyperparameters*);
     void _createFrenetState(FrenetInitialConditions*);
@@ -51,7 +51,7 @@ class JackalPlanner {
         _frenet_planner = new FrenetOptimalTrajectory(&fhp);
 
         // subscribe to the global path e.g. move base path
-        _sub_global_path = nh->subscribe(
+        _sub_global_path = _nh->subscribe(
             _global_path_topic,
             1000,
             &JackalPlanner::_global_path_cb,
@@ -59,14 +59,14 @@ class JackalPlanner {
         );
 
         // subscribe to the current state of the robot
-        _sub_odom = nh->subscribe(
+        _sub_odom = _nh->subscribe(
             _odom_sub_topic,
             1000,
             &JackalPlanner::_odom_cb,
             this
         );
 
-        _pub_paths = nh->advertise<jackal_info_gain::FrenetPaths>(
+        _pub_paths = _nh->advertise<jackal_info_gain::FrenetPaths>(
             _frenet_paths_pub_topic,
             1000
         );

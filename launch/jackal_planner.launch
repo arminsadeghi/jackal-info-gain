@@ -1,11 +1,38 @@
 <launch>
 
-    <arg name="replanning_time" defualt="0.1"/>
-    <arg name="global_path_topic" defualt="path"/>
-    <arg name="odom_sub_topic" defualt="path"/>
-    <arg name="frenet_paths_pub_topic" defualt="path"/>
+    <arg name="replanning_time" default="0.1"/>
+    <arg name="global_path_topic" default="/move_base/TrajectoryPlannerROS/global_plan"/>
+    <arg name="odom_sub_topic" default="amcl_pose"/>
+    <arg name="frenet_paths_pub_topic" default="frenet_paths"/>
 
-    <node pkg="jig" type="jackal_planner_node" output="screen">
+    <param name="/jig/max_speed" value="1"/>
+    <param name="/jig/max_accel" value=".2"/>
+    <param name="/jig/max_curvature" value="1"/>
+    <param name="/jig/max_road_width_l" value="1"/>
+    <param name="/jig/max_road_width_r" value="1"/>
+    <param name="/jig/d_road_width" value=".1"/>
+    <param name="/jig/dt" value=".1"/>
+    <param name="/jig/maxt" value="5"/>
+    <param name="/jig/mint" value="3"/>
+    <param name="/jig/d_t_s" value="0.1"/>
+    <param name="/jig/n_s_sample" value="10"/>
+    <param name="/jig/obstacle_clearance" value="0"/>
+    <param name="/jig/kd" value="1"/>
+    <param name="/jig/kv" value="1"/>
+    <param name="/jig/ka" value="1"/>
+    <param name="/jig/kj" value="1"/>
+    <param name="/jig/kt" value="1"/>
+    <param name="/jig/ko" value="1"/>
+    <param name="/jig/klat" value="1"/>
+    <param name="/jig/klon" value="1"/>
+    <param name="/jig/num_threads" value="0"/>
+    <param name="/jig/global_path_topic" value="$(arg global_path_topic)"/>
+    <param name="/jig/odom_sub_topic" value="$(arg odom_sub_topic)"/>
+    <param name="/jig/frenet_paths_pub_topic" value="$(arg frenet_paths_pub_topic)"/>
+    <param name="/jig/replanning_time" value="$(arg replanning_time)"/>
+
+<!-- 
+    <node name="jig" pkg="jackal_info_gain" type="jackal_info_gain_planner_node" output="screen">
         <param name="max_speed" value="1"/>
         <param name="max_accel" value=".2"/>
         <param name="max_curvature" value="1"/>
@@ -31,5 +58,5 @@
         <param name="odom_sub_topic" value="$(arg odom_sub_topic)"/>
         <param name="frenet_paths_pub_topic" value="$(arg frenet_paths_pub_topic)"/>
         <param name="replanning_time" value="$(arg replanning_time)"/>
-    </node>
+    </node> -->
 </launch>

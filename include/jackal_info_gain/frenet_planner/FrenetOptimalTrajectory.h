@@ -39,15 +39,16 @@ public:
     void calcFrenetPaths(FrenetInitialConditions *fot_ic_);
     vector<FrenetPath *> frenet_paths;
 private:
-    FrenetInitialConditions *fot_ic;
+    FrenetInitialConditions *_fot_ic;
     FrenetHyperparameters *fot_hp;
     mutex *mu;
     FrenetPath *best_frenet_path;
     CubicSpline2D *csp;
     vector<Obstacle *> obstacles;
     vector<double> x, y;
-    void calc_frenet_paths(int start_di_index, int end_di_index,
-                           bool multithreaded);
+    void calc_frenet_paths(int start_di_index, 
+                            int end_di_index,
+                            bool multithreaded);
     void threaded_calc_all_frenet_paths();
 };
 

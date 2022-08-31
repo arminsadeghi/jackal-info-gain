@@ -1,6 +1,6 @@
 #include "jackal_info_gain/frenet_planner/Obstacle.h"
 
-#include <QLine>
+// #include <QLine>
 
 using namespace Eigen;
 using namespace std;
@@ -41,26 +41,26 @@ Obstacle::Obstacle(Vector2f first_point, Vector2f second_point, double obstacle_
 //      whether given line segment intersects an obstacle
 bool Obstacle::isSegmentInObstacle(Vector2f &p1, Vector2f &p2)
 {
-    QLineF line_segment(p1.x(), p1.y(), p2.x(), p2.y());
-    QPointF intersect_pt;
-    float length = bbox.second.x() - bbox.first.x();
-    float breadth = bbox.second.y() - bbox.first.y();
-    QLineF lseg1(bbox.first.x(), bbox.first.y(),
-                 bbox.first.x() + length, bbox.first.y());
-    QLineF lseg2(bbox.first.x(), bbox.first.y(),
-                 bbox.first.x(), bbox.first.y() + breadth);
-    QLineF lseg3(bbox.second.x(), bbox.second.y(),
-                 bbox.second.x(), bbox.second.y() - breadth);
-    QLineF lseg4(bbox.second.x(), bbox.second.y(),
-                 bbox.second.x() - length, bbox.second.y());
-    QLineF::IntersectType x1 = line_segment.intersect(lseg1, &intersect_pt);
-    QLineF::IntersectType x2 = line_segment.intersect(lseg2, &intersect_pt);
-    QLineF::IntersectType x3 = line_segment.intersect(lseg3, &intersect_pt);
-    QLineF::IntersectType x4 = line_segment.intersect(lseg4, &intersect_pt);
+    // QLineF line_segment(p1.x(), p1.y(), p2.x(), p2.y());
+    // QPointF intersect_pt;
+    // float length = bbox.second.x() - bbox.first.x();
+    // float breadth = bbox.second.y() - bbox.first.y();
+    // QLineF lseg1(bbox.first.x(), bbox.first.y(),
+    //              bbox.first.x() + length, bbox.first.y());
+    // QLineF lseg2(bbox.first.x(), bbox.first.y(),
+    //              bbox.first.x(), bbox.first.y() + breadth);
+    // QLineF lseg3(bbox.second.x(), bbox.second.y(),
+    //              bbox.second.x(), bbox.second.y() - breadth);
+    // QLineF lseg4(bbox.second.x(), bbox.second.y(),
+    //              bbox.second.x() - length, bbox.second.y());
+    // QLineF::IntersectType x1 = line_segment.intersect(lseg1, &intersect_pt);
+    // QLineF::IntersectType x2 = line_segment.intersect(lseg2, &intersect_pt);
+    // QLineF::IntersectType x3 = line_segment.intersect(lseg3, &intersect_pt);
+    // QLineF::IntersectType x4 = line_segment.intersect(lseg4, &intersect_pt);
     // check for bounded intersection. IntersectType for bounded intersection is 1.
-    if (x1 == 1 || x2 == 1 || x3 == 1 || x4 == 1) {
-        return true;
-    }
+    // if (x1 == 1 || x2 == 1 || x3 == 1 || x4 == 1) {
+    //     return true;
+    // }
 
     return false;
 }

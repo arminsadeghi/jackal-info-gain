@@ -12,6 +12,10 @@
       <arg name="use_map_topic" value="$(arg use_map_topic)" />
       <arg name="scan_topic"    value="$(arg scan_topic)" />
     </include>
+
+    <!-- <node pkg="fake_localization" type="fake_localization" name="fake_localization" output="screen"/> -->
+    <!-- For fake localization we need static transform between /odom and /map -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="map_odom_broadcaster" args="0 0 0 0 0 0 /map /odom 100" /> -->
   
     <!--- Run Move Base -->
    <include file="$(find jackal_navigation)/launch/include/move_base.launch" />
