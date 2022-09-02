@@ -18,12 +18,16 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <jackal_info_gain/FrenetPaths.h>
 #include "jackal_info_gain/frenet_planner/FrenetOptimalTrajectory.h"
+#include "jsk_recognition_msgs/PolygonArray.h"
+#include "geometry_msgs/PolygonStamped.h"
+#include "geometry_msgs/Point32.h"
 
 class JackalPlanner {
     ros::NodeHandle* _nh;
     ros::Subscriber _sub_global_path;
     ros::Subscriber _sub_odom;
     ros::Publisher _pub_paths;
+    ros::Publisher _pub_paths_viz;
     nav_msgs::Path _global_path;
     std::string _global_path_topic;
     std::string _odom_sub_topic;
@@ -36,9 +40,9 @@ class JackalPlanner {
     void _global_path_cb(const nav_msgs::Path::ConstPtr&);
     void _odom_cb(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &);
     void _getTrajectories();
-    void _getPlannerParams(FrenetHyperparameters*);
+    void _getPlannerParams(FrenetHyperparameters&);
     void _createFrenetState(FrenetInitialConditions*);
-    void _publishFrenetPaths();
+    
     
     public:
     JackalPlanner(ros::NodeHandle* nh){
@@ -46,9 +50,9 @@ class JackalPlanner {
         _nh = nh;
 
         FrenetHyperparameters fhp;
-        _getPlannerParams(&fhp);
+        _getPlannerParams(fhp);
 
-        _frenet_planner = new FrenetOptimalTrajectory(&fhp);
+        _frenet_planner = new FrenetOptimalTrajectory(fhp);
 
         // subscribe to the global path e.g. move base path
         _sub_global_path = _nh->subscribe(
@@ -71,8 +75,14 @@ class JackalPlanner {
             1000
         );
 
+        _pub_paths_viz = _nh->advertise<jsk_recognition_msgs::PolygonArray>(
+            _frenet_paths_pub_topic + "_viz",
+            1000
+        );
+
         _last_planning_update = ros::Time::now();
     }
+    void publishFrenetPaths();
 
 };
 #endif //JACKAL_INFO_JACKAL_PLANNER

@@ -21,7 +21,12 @@ int main(int argc, char** argv){
     ros::NodeHandle nh;
     
     JackalPlanner planner(&nh);
+    ros::Rate loop_rate(10);
+    while (ros::ok()){
+        planner.publishFrenetPaths();
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
-    ros::spin();
     return 0;
 }

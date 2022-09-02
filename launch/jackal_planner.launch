@@ -10,7 +10,7 @@
     <param name="/jig/max_curvature" value="1"/>
     <param name="/jig/max_road_width_l" value="1"/>
     <param name="/jig/max_road_width_r" value="1"/>
-    <param name="/jig/d_road_width" value=".1"/>
+    <param name="/jig/d_road_width" value=".5"/>
     <param name="/jig/dt" value=".1"/>
     <param name="/jig/maxt" value="5"/>
     <param name="/jig/mint" value="3"/>
@@ -25,7 +25,7 @@
     <param name="/jig/ko" value="1"/>
     <param name="/jig/klat" value="1"/>
     <param name="/jig/klon" value="1"/>
-    <param name="/jig/num_threads" value="0"/>
+    <param name="/jig/num_threads" value="2"/>
     <param name="/jig/global_path_topic" value="$(arg global_path_topic)"/>
     <param name="/jig/odom_sub_topic" value="$(arg odom_sub_topic)"/>
     <param name="/jig/frenet_paths_pub_topic" value="$(arg frenet_paths_pub_topic)"/>

@@ -7,14 +7,14 @@
 #include "jackal_info_gain/frenet_planner/spline/QuarticPolynomial.h"
 #include "jackal_info_gain/frenet_planner/spline/QuinticPolynomial.h"
 #include "jackal_info_gain/frenet_planner/spline/utils.h"
-
+#include <ros/console.h>
 using namespace std;
 
 // Compute the frenet optimal trajectory
-FrenetOptimalTrajectory::FrenetOptimalTrajectory(FrenetHyperparameters *fot_hp_) {
+FrenetOptimalTrajectory::FrenetOptimalTrajectory(FrenetHyperparameters &fot_hp) {
     
     // parse the waypoints and obstacles
-    fot_hp = fot_hp_;
+    _fot_hp = fot_hp;
     mu = new mutex();
 }
 
@@ -38,7 +38,6 @@ FrenetOptimalTrajectory::~FrenetOptimalTrajectory() {
 void FrenetOptimalTrajectory::calcFrenetPaths(FrenetInitialConditions *fot_ic){
     
     auto start = chrono::high_resolution_clock::now();
-    // std::cout<<fot_ic->s0<<std::endl;
     x.assign(fot_ic->wx, fot_ic->wx + fot_ic->nw);
     y.assign(fot_ic->wy, fot_ic->wy + fot_ic->nw);
     
@@ -51,51 +50,38 @@ void FrenetOptimalTrajectory::calcFrenetPaths(FrenetInitialConditions *fot_ic){
         return;
     }
     auto end = chrono::high_resolution_clock::now();
-    double run_time =
-        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
-    run_time *= 1e-6;
-    cout << "Planning runtime copy" << run_time << "\n";
+    double run_time = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    run_time *= 1e-9;
+    ROS_INFO("Time to copy the path: %f", run_time);
 
     start = chrono::high_resolution_clock::now();
     // construct spline path
     csp = new CubicSpline2D(x, y);
     end = chrono::high_resolution_clock::now();
-    run_time =
-        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
-    run_time *= 1e-6;
-    cout << "Planning runtime SPLINE" << run_time << "\n";
-    // std::cout<<"total_di_iter********,"<<std::endl;
+    run_time = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    run_time *= 1e-9;
+    ROS_INFO("Time to generate the cubic spline: %f", run_time);
 
     start = chrono::high_resolution_clock::now();
-    // std::cout<<"00000000000000,"<<std::endl;
-    int total_di_iter = static_cast<int>((fot_hp->max_road_width_l +
-                                            fot_hp->max_road_width_r) /
-                                            fot_hp->d_road_w) +
-                        1; // account for the last index
 
-    // std::cout<<"total_di_iter********,"<<total_di_iter<<std::endl;
-    calc_frenet_paths(0, total_di_iter, false);
+    // calculate the trajectories
+    if (_fot_hp.num_threads == 0) {
+        // calculate how to split computation across threads
+        int total_di_iter = static_cast<int>((_fot_hp.max_road_width_l +
+                                              _fot_hp.max_road_width_r) /
+                                             _fot_hp.d_road_w) +
+                            1; // account for the last index
 
-    // // calculate the trajectories
-    // if (fot_hp->num_threads == 0) {
-    //     // calculate how to split computation across threads
-    //     std::cout<<"00000000000000,"<<std::endl;
-    //     int total_di_iter = static_cast<int>((fot_hp->max_road_width_l +
-    //                                           fot_hp->max_road_width_r) /
-    //                                          fot_hp->d_road_w) +
-    //                         1; // account for the last index
+        std::cout<<"total_di_iter********,"<<total_di_iter<<std::endl;
+        calc_frenet_paths(0, total_di_iter, false);
 
-    //     std::cout<<"total_di_iter********,"<<total_di_iter<<std::endl;
-    //     calc_frenet_paths(0, total_di_iter, false);
-
-    // } else { // if threading
-    //     threaded_calc_all_frenet_paths();
-    // }
+    } else { // if threading
+        threaded_calc_all_frenet_paths();
+    }
     end = chrono::high_resolution_clock::now();
-    run_time =
-        chrono::duration_cast<chrono::nanoseconds>(end - start).count();
-    run_time *= 1e-6;
-    cout << "Planning runtime CREATION" << run_time << "\n";
+    run_time = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    run_time *= 1e-9;
+    ROS_INFO("Time to generate the frenet paths: %f", run_time);
 }
 
 // Return the best path
@@ -120,15 +106,15 @@ void FrenetOptimalTrajectory::threaded_calc_all_frenet_paths() {
 
     // calculate how to split computation across threads
     int num_di_iter =
-        static_cast<int>((fot_hp->max_road_width_l + fot_hp->max_road_width_r) /
-                         fot_hp->d_road_w);
+        static_cast<int>((_fot_hp.max_road_width_l + _fot_hp.max_road_width_r) /
+                         _fot_hp.d_road_w);
     num_di_iter = num_di_iter + 1; // account for the last index
 
     int iter_di_index_range =
-        static_cast<int>(num_di_iter / fot_hp->num_threads);
+        static_cast<int>(num_di_iter / _fot_hp.num_threads);
 
-    for (int i = 0; i < fot_hp->num_threads; i++) {
-        if (i != fot_hp->num_threads - 1) {
+    for (int i = 0; i < _fot_hp.num_threads; i++) {
+        if (i != _fot_hp.num_threads - 1) {
             threads.push_back(thread(
                 &FrenetOptimalTrajectory::calc_frenet_paths, this,
                 i * iter_di_index_range, (i + 1) * iter_di_index_range, true));
@@ -157,7 +143,6 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                                                 int end_di_index,
                                                 bool multithreaded) {
 
-    // std::cout<<"==============="<<std::endl;
     double t, ti, tv;
     double lateral_deviation, lateral_velocity, lateral_acceleration,
         lateral_jerk;
@@ -168,21 +153,19 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
     // double valid_path_time = 0;
 
     // initialize di, with start_di_index
-    double di = -fot_hp->max_road_width_l + start_di_index * fot_hp->d_road_w;
-
+    double di = -_fot_hp.max_road_width_l + start_di_index * _fot_hp.d_road_w;
     // generate path to each offset goal
-    // note di goes up to but not including end_di_index*fot_hp->d_road_w
-    while ((di < -fot_hp->max_road_width_l + end_di_index * fot_hp->d_road_w) &&
-           (di <= fot_hp->max_road_width_r)) {
-        ti = fot_hp->mint;
+    // note di goes up to but not including end_di_index*_fot_hp.d_road_w
+    while ((di < -_fot_hp.max_road_width_l + end_di_index * _fot_hp.d_road_w) &&
+           (di <= _fot_hp.max_road_width_r)) {
+        ti = _fot_hp.mint;
         // lateral motion planning
-        while (ti <= fot_hp->maxt) {
+        while (ti <= _fot_hp.maxt) {
             lateral_deviation = 0;
             lateral_velocity = 0;
             lateral_acceleration = 0;
             lateral_jerk = 0;
-
-            fp = new FrenetPath(fot_hp);
+            fp = new FrenetPath(&_fot_hp);
           
             QuinticPolynomial lat_qp = QuinticPolynomial(
                 _fot_ic->c_d, _fot_ic->c_d_d, _fot_ic->c_d_dd, di, 0.0, 0.0, ti);
@@ -199,17 +182,16 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 lateral_velocity += abs(lat_qp.calc_first_derivative(t));
                 lateral_acceleration += abs(lat_qp.calc_second_derivative(t));
                 lateral_jerk += abs(lat_qp.calc_third_derivative(t));
-                t += fot_hp->dt;
+                t += _fot_hp.dt;
             }
             // velocity keeping
-            tv = _fot_ic->target_speed - fot_hp->d_t_s * fot_hp->n_s_sample;
+            tv = _fot_ic->target_speed - _fot_hp.d_t_s * _fot_hp.n_s_sample;
             while (tv <=
-                   _fot_ic->target_speed + fot_hp->d_t_s * fot_hp->n_s_sample) {
+                   _fot_ic->target_speed + _fot_hp.d_t_s * _fot_hp.n_s_sample) {
                 longitudinal_acceleration = 0;
                 longitudinal_jerk = 0;
-
                 // copy frenet path
-                tfp = new FrenetPath(fot_hp);
+                tfp = new FrenetPath(&_fot_hp);
                 tfp->t.assign(fp->t.begin(), fp->t.end());
                 tfp->d.assign(fp->d.begin(), fp->d.end());
                 tfp->d_d.assign(fp->d_d.begin(), fp->d_d.end());
@@ -217,7 +199,6 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 tfp->d_ddd.assign(fp->d_ddd.begin(), fp->d_ddd.end());
                 QuarticPolynomial lon_qp = QuarticPolynomial(
                     _fot_ic->s0, _fot_ic->c_speed, 0.0, tv, 0.0, ti);
-
                 // longitudinal motion
                 for (double tp : tfp->t) {
                     tfp->s.push_back(lon_qp.calc_point(tp));
@@ -236,7 +217,7 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 if (!success) {
                     // deallocate memory and continue
                     delete tfp;
-                    tv += fot_hp->d_t_s;
+                    tv += _fot_hp.d_t_s;
                     continue;
                 }
 
@@ -249,7 +230,7 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 if (!valid_path) {
                     // deallocate memory and continue
                     delete tfp;
-                    tv += fot_hp->d_t_s;
+                    tv += _fot_hp.d_t_s;
                     continue;
                 }
 
@@ -258,10 +239,10 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                 tfp->c_lateral_velocity = lateral_velocity;
                 tfp->c_lateral_acceleration = lateral_acceleration;
                 tfp->c_lateral_jerk = lateral_jerk;
-                tfp->c_lateral = fot_hp->kd * tfp->c_lateral_deviation +
-                                 fot_hp->kv * tfp->c_lateral_velocity +
-                                 fot_hp->ka * tfp->c_lateral_acceleration +
-                                 fot_hp->kj * tfp->c_lateral_jerk;
+                tfp->c_lateral = _fot_hp.kd * tfp->c_lateral_deviation +
+                                 _fot_hp.kv * tfp->c_lateral_velocity +
+                                 _fot_hp.ka * tfp->c_lateral_acceleration +
+                                 _fot_hp.kj * tfp->c_lateral_jerk;
 
                 // longitudinal costs
                 tfp->c_longitudinal_acceleration = longitudinal_acceleration;
@@ -270,19 +251,19 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                     abs(_fot_ic->target_speed - tfp->s_d.back());
                 tfp->c_time_taken = ti;
                 tfp->c_longitudinal =
-                    fot_hp->ka * tfp->c_longitudinal_acceleration +
-                    fot_hp->kj * tfp->c_longitudinal_jerk +
-                    fot_hp->kt * tfp->c_time_taken +
-                    fot_hp->kd * tfp->c_end_speed_deviation;
+                    _fot_hp.ka * tfp->c_longitudinal_acceleration +
+                    _fot_hp.kj * tfp->c_longitudinal_jerk +
+                    _fot_hp.kt * tfp->c_time_taken +
+                    _fot_hp.kd * tfp->c_end_speed_deviation;
 
                 // obstacle costs
                 tfp->c_inv_dist_to_obstacles =
                     tfp->inverse_distance_to_obstacles(obstacles);
 
                 // final cost
-                tfp->cf = fot_hp->klat * tfp->c_lateral +
-                          fot_hp->klon * tfp->c_longitudinal +
-                          fot_hp->ko * tfp->c_inv_dist_to_obstacles;
+                tfp->cf = _fot_hp.klat * tfp->c_lateral +
+                          _fot_hp.klon * tfp->c_longitudinal +
+                          _fot_hp.ko * tfp->c_inv_dist_to_obstacles;
 
                 if (multithreaded) {
                     // added mutex lock to prevent threads competing to write to
@@ -294,16 +275,16 @@ void FrenetOptimalTrajectory::calc_frenet_paths(int start_di_index,
                     frenet_paths.push_back(tfp);
                 }
 
-                tv += fot_hp->d_t_s;
+                tv += _fot_hp.d_t_s;
             }
-            ti += fot_hp->dt;
+            ti += _fot_hp.dt;
             // make sure to deallocate
             delete fp;
         }
-        di += fot_hp->d_road_w;
+        di += _fot_hp.d_road_w;
     }
     // valid_path_time *= 1e-6;
-    // cout << "NUM THREADS = " << fot_hp->num_threads << "\n"; // check if
+    // cout << "NUM THREADS = " << _fot_hp.num_threads << "\n"; // check if
     // Thread argument is passed down cout << "Found " << frenet_paths.size() <<
     // " valid paths out of " << num_paths << " paths; Valid path time " <<
     // valid_path_time << "\n";
@@ -325,5 +306,14 @@ void FrenetOptimalTrajectory::addObstacle(Vector2f first_point,
                                           Vector2f second_point) {
     obstacles.push_back(new Obstacle(std::move(first_point),
                                      std::move(second_point),
-                                     fot_hp->obstacle_clearance));
+                                     _fot_hp.obstacle_clearance));
+}
+
+/**
+ * @brief return the hyper parameters of the frenet paths
+ * 
+ * @return FrenetHyperparameters* 
+ */
+FrenetHyperparameters FrenetOptimalTrajectory::getHyperParams(){
+    return _fot_hp;
 }
