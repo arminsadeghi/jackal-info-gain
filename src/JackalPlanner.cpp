@@ -76,7 +76,7 @@ void JackalPlanner::_global_path_cb(const nav_msgs::Path::ConstPtr& msg){
 
     // get the current global plan
     _global_path = nav_msgs::Path(*msg); 
-    ROS_INFO("New global path arrived with length : %d", _global_path.poses.size());
+    ROS_INFO("New global path arrived with length : %ld", _global_path.poses.size());
 }
 
 /**
@@ -98,7 +98,7 @@ void JackalPlanner::publishFrenetPaths(){
     
     _frenet_planner->frenet_paths.clear();
     _frenet_planner->calcFrenetPaths(&init_con);
-    ROS_INFO("Number of frenet paths: %d", _frenet_planner->frenet_paths.size());
+    ROS_INFO("Number of frenet paths: %ld", _frenet_planner->frenet_paths.size());
 
     
     _last_planning_update = ros::Time::now();
@@ -106,26 +106,48 @@ void JackalPlanner::publishFrenetPaths(){
     // publish new paths visualze 
     int n_paths = _frenet_planner->frenet_paths.size();
 
-    jsk_recognition_msgs::PolygonArray msg;
+    jackal_info_gain::FrenetPaths msg;
     msg.header = std_msgs::Header();
-    msg.header.frame_id = "/map";
+    msg.header.frame_id = "map";
     msg.header.stamp = ros::Time::now();
     for (int i=0; i< n_paths; i++){
         int path_length = _frenet_planner->frenet_paths[i]->x.size();
-        geometry_msgs::PolygonStamped polygon;
-        polygon.header.frame_id = "/map";
-        polygon.header.stamp = ros::Time::now();
+        nav_msgs::Path path;
+        path.header.frame_id = "map";
+        path.header.stamp = ros::Time::now();
         for (int j =0; j< path_length; j++){
-            geometry_msgs::Point32 p;
-            p.x = _frenet_planner->frenet_paths[i]->x[j];
-            p.y = _frenet_planner->frenet_paths[i]->y[j];
-            p.z = 0;
-            polygon.polygon.points.push_back(p);
+            geometry_msgs::PoseStamped p;
+            p.header.frame_id = "map";
+            p.header.stamp = ros::Time::now();
+            p.pose.position.x = _frenet_planner->frenet_paths[i]->x[j];
+            p.pose.position.y = _frenet_planner->frenet_paths[i]->y[j];
+            p.pose.position.z = 0;
+            
+            path.poses.push_back(p);
         }
-        msg.polygons.push_back(polygon);
-        msg.likelihood.push_back(1.0);
+        msg.paths.push_back(path);
     }
-    _pub_paths_viz.publish(msg);
+
+    // jsk_recognition_msgs::PolygonArray msg;
+    // msg.header = std_msgs::Header();
+    // msg.header.frame_id = "map";
+    // msg.header.stamp = ros::Time::now();
+    // for (int i=0; i< n_paths; i++){
+    //     int path_length = _frenet_planner->frenet_paths[i]->x.size();
+    //     geometry_msgs::PolygonStamped polygon;
+    //     polygon.header.frame_id = "map";
+    //     polygon.header.stamp = ros::Time::now();
+    //     for (int j =0; j< path_length; j++){
+    //         geometry_msgs::Point32 p;
+    //         p.x = _frenet_planner->frenet_paths[i]->x[j];
+    //         p.y = _frenet_planner->frenet_paths[i]->y[j];
+    //         p.z = 0;
+    //         polygon.polygon.points.push_back(p);
+    //     }
+    //     msg.polygons.push_back(polygon);
+    //     msg.likelihood.push_back(1.0);
+    // }
+    _pub_paths.publish(msg);
 }
 
 /**
@@ -205,17 +227,17 @@ void JackalPlanner::_getPlannerParams(FrenetHyperparameters& fhp){
         ROS_INFO("klon: %f", fhp.klon);
     }
     if (_nh->getParam("/jig/num_threads", fhp.num_threads)){
-        ROS_INFO("num_threads: %f", fhp.num_threads);
+        ROS_INFO("num_threads: %d", fhp.num_threads);
     }
 
     if (_nh->getParam("/jig/global_path_topic", _global_path_topic)){
-        ROS_INFO("global_path_topic: %s", _global_path_topic);
+        ROS_INFO("global_path_topic: %s", _global_path_topic.c_str());
     }
     if (_nh->getParam("/jig/odom_sub_topic", _odom_sub_topic)){
-        ROS_INFO("odom_sub_topic: %s", _odom_sub_topic);
+        ROS_INFO("odom_sub_topic: %s", _odom_sub_topic.c_str());
     }
     if (_nh->getParam("/jig/frenet_paths_pub_topic", _frenet_paths_pub_topic)){
-        ROS_INFO("frenet_paths_pub_topic: %s", _frenet_paths_pub_topic);
+        ROS_INFO("frenet_paths_pub_topic: %s", _frenet_paths_pub_topic.c_str());
     }
     if (_nh->getParam("/jig/replanning_time", _replanning_time)){
         ROS_INFO("replanning_time: %f", _replanning_time);

@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   geometry_msgs
   jsk_recognition_msgs
+  visualization_msgs
   message_generation
 )
 
